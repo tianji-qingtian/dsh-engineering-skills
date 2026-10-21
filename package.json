@@ -1,0 +1,55 @@
+{
+  "name": "dsh-engineering-skills",
+  "version": "0.1.0",
+  "description": "Engineering & productivity agent skills (grilling, spec/ticket flows, TDD, code review, domain modelling, handoff), vendored from Matt Pocock's skills, as a DeepSeek Harness plugin bundle.",
+  "type": "module",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "skills",
+    "cordis.patch.yml",
+    "UPSTREAM.json",
+    "README.md",
+    "README.zh.md",
+    "NOTICE",
+    "LICENSE"
+  ],
+  "scripts": {
+    "sync": "node scripts/sync-upstream.mjs",
+    "sync:check": "node scripts/sync-upstream.mjs --check",
+    "test": "node test-host.mjs"
+  },
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "agent-skills",
+    "skills",
+    "tdd",
+    "code-review",
+    "engineering"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-skill": "^0.2.1-rc.2"
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "~3.18.5"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-skill": "^0.2.1-rc.2"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

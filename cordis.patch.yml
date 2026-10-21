@@ -1,0 +1,17 @@
+# dsh-engineering-skills profile bundle patch.
+#
+# Declared by package.json `dsh.bundle.patch`; applied when this package is in a
+# profile's `dsh.profile.bundles` list. One host row — the browser half is not
+# needed: the `/` skill menu, the `skill` tool row and the catalog are already
+# shipped by the harness (`@deepseek-ai/dsh-client-ui-skill`, `dsh-tool-skill`).
+#
+# Override config from your own profile patch afterwards, e.g.:
+#
+#   - id: engineering-skills
+#     config:
+#       categories: [productivity]
+#       appendHarnessGuide: false
+
+- insert:
+    - id: engineering-skills
+      name: 'dsh-engineering-skills'

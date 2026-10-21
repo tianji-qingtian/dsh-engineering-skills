@@ -1,0 +1,22 @@
+dsh-engineering-skills
+=====================================
+
+The skill instructions under `skills/` are vendored, unmodified except for the
+two `Skill tool` → `` `skill` tool `` rewrites listed in
+`scripts/sync-upstream.mjs`, from:
+
+    Matt Pocock's skills — "Skills for Real Engineers"
+    https://github.com/mattpocock/skills
+    Licensed under the MIT License
+    Copyright (c) Matt Pocock
+
+Pinned source: see `UPSTREAM.json` (tag/version, 40-character commit, and the
+`.claude-plugin/plugin.json#skills` list that defines the shipped set).
+
+The plugin code (`lib/`, `scripts/`, `test-*.mjs`, `cordis.patch.yml`,
+`package.json`) is original work by 擎天 / tianji-qingtian under the MIT License
+in `LICENSE`. `skills/pr/CREDITS.md` carries upstream's own attribution for the
+`pr` skill (Dex Horthy / Humanlayer), and is vendored verbatim.
+
+If you redistribute this package, keep this NOTICE and the upstream MIT license
+alongside `LICENSE`.

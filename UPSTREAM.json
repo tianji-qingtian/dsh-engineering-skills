@@ -1,0 +1,6 @@
+{
+  "repo": "https://github.com/mattpocock/skills",
+  "version": "1.3.1",
+  "commit": "5beb35b040e3de97e54fa9e386d7e42d15c295c2",
+  "note": "Pinned upstream commit. Move this pin, then run `node scripts/sync-upstream.mjs` and commit the regenerated skills/ tree. `node scripts/sync-upstream.mjs --check` fails when the tree drifts from this pin."
+}

@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.3.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Smoke check (module exports)
+        run: |
+          node -e "import('./lib/index.js').then(m => {
+            if (typeof m.apply !== 'function') { console.error('missing apply()'); process.exit(1) }
+            if (!Array.isArray(m.inject) || !m.inject.includes('skills')) { console.error('missing skills injection'); process.exit(1) }
+            if (typeof m.Config !== 'function') { console.error('missing Config schema'); process.exit(1) }
+            console.log('exports ok:', Object.keys(m).join(', '))
+          })"
+
+      - name: Host behavior tests
+        run: pnpm test
+
+      - name: Registry integration test (real @deepseek-ai/dsh-skill)
+        run: node test-registry.mjs
+
+      - name: Upstream drift check (skills/ == pinned commit)
+        run: pnpm run sync:check
