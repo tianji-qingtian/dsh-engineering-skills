@@ -23,7 +23,7 @@
 | 安装/卸载 | 手工 `npx skills add` 或复制目录 | `dsh plugin add` / `remove`，插件页可视管理 |
 | 升级 | 手工重跑安装脚本 | 升 tag 即可；`scripts/sync-upstream.mjs` 钉住上游 commit，`--check` 防漂移 |
 | 全局目录污染 | 写 `~/.agents/skills`，每个 agent 共享 | 只在本 profile 生效，不碰用户技能目录 |
-| 目录成本 | 27 个全进 catalog | 可按 category / 技能名裁剪，控制常驻 token |
+| 目录成本 | 11 个 model 描述常驻 catalog（27 个都在 `/` 菜单） | 可按 category / 技能名裁剪，控制常驻 token |
 | 词表适配 | 原文里的 `Skill tool` 等 harness 措辞 | 加载时补一段 DSH 工具映射（可关） |
 | 多文件资源 | 依赖文件系统 base dir | 同左，但随包分发、版本一致 |
 
@@ -37,19 +37,19 @@
 
 ```sh
 # 1. 装进 web profile（pnpm 驱动；lib/ 已随仓库提交，安装时不跑构建脚本）。
-#    建议钉 release tag（#v0.1.0）；#main 跟踪最新提交。
-dsh plugin --profile web add "github:tianji-qingtian/dsh-engineering-skills#v0.1.0"
+#    建议钉 release tag（#v0.1.1）；#main 跟踪最新提交。
+dsh plugin --profile web add "github:tianji-qingtian/dsh-engineering-skills#v0.1.1"
 
 # 2. 重启该 profile —— add 只改 profile 文件，运行中的实例不会热加载
 dsh --profile web
 ```
 
-重启后 `/` 菜单应列出 16 个 user-invoked 技能，模型 catalog 里应出现 11 个 model-invoked 技能。设置 → 插件 里能看到 `dsh-engineering-skills`。
+重启后 `/` 菜单应列出全部 27 个技能（16 个仅用户 + 11 个双通道），模型 catalog 里应出现 11 个 model-invoked 技能。设置 → 插件 里能看到 `dsh-engineering-skills`。
 
 开发/试用本地路径：
 
 ```sh
-dsh plugin --profile web add /Users/qijie/Projects/CodeX/DeepSeek-Plugin/dsh-engineering-skills
+dsh plugin --profile web add <本地检出目录>/dsh-engineering-skills
 ```
 
 ## 配置
@@ -68,9 +68,9 @@ dsh plugin --profile web add /Users/qijie/Projects/CodeX/DeepSeek-Plugin/dsh-eng
 | 字段 | 默认 | 说明 |
 |---|---|---|
 | `providerName` | `engineering-skills` | 技能注册表中的 provider 名；重名会让挂载失败，改成别的即可 |
-| `categories` | `[engineering, productivity]` | 上游两个推广桶；未知值直接挂载失败，不静默缩表 |
-| `skills` | `[]` | 显式技能名子集；写错名字同样直接失败 |
-| `appendHarnessGuide` | `true` | 关闭后正文与上游逐字一致 |
+| `categories` | `[engineering, productivity]` | 上游两个推广桶；未知值直接挂载失败，不静默缩表（`skills` 非空时忽略本项） |
+| `skills` | `[]` | 显式技能名子集；**非空时覆盖** `categories`（未列出的类别不参与过滤）；写错名字直接失败 |
+| `appendHarnessGuide` | `true` | 关闭后只加载 vendored 正文，不追加 harness 指南 |
 
 ## 技能映射（上游 → DSH）
 
@@ -94,6 +94,8 @@ node scripts/sync-upstream.mjs --source ../mp-skills   # 用本地已有 clone�
 node scripts/sync-upstream.mjs --check          # CI：skills/ 与 pin 不一致就 fail
 ```
 
+`--check` 还会校验 `UPSTREAM.json` 的 `version` 与上游 `package.json` / `.claude-plugin/plugin.json` 声明是否一致，版本字符串不能靠"抄进 manifest"自证。
+
 发版流程：改 `UPSTREAM.json` 的 `version`/`commit` → `sync` → 跑 `pnpm test` → 打 tag。上游新增技能只在它的 `.claude-plugin/plugin.json` 里出现时才会被带上，`in-progress/`、`misc/` 永不发布。
 
 ## 已知边界（诚实清单）
@@ -115,15 +117,17 @@ node scripts/sync-upstream.mjs --check          # CI：skills/ 与 pin 不一致
 
 ## 开发与测试
 
+仓库用 pnpm `11.28.5` 管理（`packageManager` 字段，CI 同版本）；其它大版本可能重写 `pnpm-lock.yaml` 的格式，提交前请确认锁文件只有预期改动。
+
 ```sh
 pnpm install
-pnpm test                 # node test-host.mjs：19 项行为断言
+pnpm test                 # node test-host.mjs：23 项行为断言
 node test-registry.mjs    # 对真实 @deepseek-ai/dsh-skill 注册表的集成测试
 pnpm run sync:check       # 上游漂移检查
 ```
 
-`test-host.mjs` 用假 `skills` 服务跑真实 `apply()`，并复刻 registry 的候选校验规则（kebab-case 名称、description 非空、invocation 布尔、provider 归属），防止某条技能 frontmatter 悄悄把整张目录打残。`test-registry.mjs` 用真实 `SkillRegistry` 走 `list()` / `get()`，证明 `skill` 工具那条加载路径能拿到正文。
+`test-host.mjs` 用假 `skills` 服务跑真实 `apply()`，并复刻 registry 的候选校验规则（kebab-case 名称、description 非空、invocation 布尔、provider 归属），防止某条技能 frontmatter 悄悄把整张目录打残。`test-registry.mjs` 用真实 `SkillRegistry` 走 `list()` / `get()`，证明 `skill` 工具那条加载路径能拿到正文；它还验证插件 fiber dispose 后 provider 真正注销、插件可重新挂载（防止停用/热重载后旧目录残留、重挂失败）。
 
 ## 许可
 
-插件代码 MIT（`LICENSE`）；`skills/` 内容来自 Matt Pocock 的 MIT 仓库，归属与固定来源见 `NOTICE` 与 `UPSTREAM.json`。
+插件代码 MIT（`LICENSE`）；`skills/` 内容来自 Matt Pocock 的 MIT 仓库（完整许可见 `LICENSE-upstream`），归属、改写清单与固定来源见 `NOTICE` 与 `UPSTREAM.json`。

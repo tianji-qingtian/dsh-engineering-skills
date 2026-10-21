@@ -17,7 +17,10 @@
  *   node scripts/sync-upstream.mjs --check               # fail if vendored output is stale
  *
  * `--check` exits 1 when ./skills differs from what this script would write,
- * so CI can catch a forgotten re-sync after the pin moves.
+ * so CI can catch a forgotten re-sync after the pin moves. Both modes also
+ * verify that UPSTREAM.json's `version` matches the version declared by the
+ * fetched upstream commit (`package.json` / `.claude-plugin/plugin.json`), so a
+ * stale version string cannot pass `--check` by being copied into the manifest.
  */
 import { execFileSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync, mkdirSync } from 'node:fs'
@@ -131,6 +134,15 @@ function adaptBody(body) {
   return adapted.trim() + '\n'
 }
 
+/** The version the fetched upstream commit declares, cross-checked across its two manifests. */
+function upstreamVersion(sourceDir) {
+  const pkg = JSON.parse(readFileSync(join(sourceDir, 'package.json'), 'utf8'))
+  const plugin = JSON.parse(readFileSync(join(sourceDir, '.claude-plugin', 'plugin.json'), 'utf8'))
+  const declared = [...new Set([pkg.version, plugin.version].filter((version) => version !== undefined))]
+  if (declared.length !== 1) throw new Error(`upstream declares conflicting versions: ${declared.join(', ')}`)
+  return declared[0]
+}
+
 /** The upstream `.claude-plugin/plugin.json` `skills` array, as [category, name] pairs. */
 function shippedSkills(sourceDir) {
   const plugin = JSON.parse(readFileSync(join(sourceDir, '.claude-plugin', 'plugin.json'), 'utf8'))
@@ -225,6 +237,10 @@ function checkOutputs(outputs) {
 const args = parseArgs(process.argv.slice(2))
 const { dir, cleanup } = readSource(args.source)
 try {
+  const actualVersion = upstreamVersion(dir)
+  if (actualVersion !== PIN.version) {
+    throw new Error(`UPSTREAM.json pins version ${PIN.version}, but upstream ${PIN.commit.slice(0, 7)} declares ${actualVersion} — update UPSTREAM.json (version + commit) and re-run`)
+  }
   const outputs = build(dir)
   if (args.check) checkOutputs(outputs)
   else {

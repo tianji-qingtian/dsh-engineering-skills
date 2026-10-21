@@ -1,6 +1,6 @@
 {
   "name": "dsh-engineering-skills",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Engineering & productivity agent skills (grilling, spec/ticket flows, TDD, code review, domain modelling, handoff), vendored from Matt Pocock's skills, as a DeepSeek Harness plugin bundle.",
   "type": "module",
   "engines": {
@@ -19,7 +19,9 @@
     "README.md",
     "README.zh.md",
     "NOTICE",
-    "LICENSE"
+    "LICENSE",
+    "LICENSE-upstream",
+    "imgs"
   ],
   "scripts": {
     "sync": "node scripts/sync-upstream.mjs",
@@ -51,5 +53,6 @@
     "bundle": {
       "patch": "./cordis.patch.yml"
     }
-  }
+  },
+  "packageManager": "pnpm@11.28.5"
 }

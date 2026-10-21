@@ -13,7 +13,7 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 12.3.4
+          version: 11.28.5
 
       - uses: actions/setup-node@v4
         with:
@@ -35,8 +35,24 @@ jobs:
       - name: Host behavior tests
         run: pnpm test
 
-      - name: Registry integration test (real @deepseek-ai/dsh-skill)
+      - name: Registry integration + plugin-fiber lifecycle
         run: node test-registry.mjs
 
-      - name: Upstream drift check (skills/ == pinned commit)
+      - name: Upstream drift and pin-version check
         run: pnpm run sync:check
+
+      - name: Package contents (runtime files only)
+        run: |
+          pnpm pack --pack-destination /tmp >/dev/null
+          tar -tzf /tmp/dsh-engineering-skills-*.tgz > /tmp/pack.txt
+          for path in \
+            package/lib/index.js \
+            package/skills/manifest.json \
+            package/cordis.patch.yml \
+            package/UPSTREAM.json \
+            package/NOTICE \
+            package/LICENSE \
+            package/LICENSE-upstream; do
+            grep -qx "$path" /tmp/pack.txt || { echo "missing $path"; exit 1; }
+          done
+          echo "pack ok"

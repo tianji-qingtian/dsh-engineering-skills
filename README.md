@@ -41,23 +41,23 @@ commands with `npx @deepseek-ai/dsh`). This release is verified on harness `0.2.
 
 ```sh
 # 1. add the bundle to your web profile (pnpm-backed; the built lib/ is committed,
-#    so no build script runs at install time). Prefer a release tag (#v0.1.0);
+#    so no build script runs at install time). Prefer a release tag (#v0.1.1);
 #    #main tracks the latest commit.
-dsh plugin --profile web add "github:tianji-qingtian/dsh-engineering-skills#v0.1.0"
+dsh plugin --profile web add "github:tianji-qingtian/dsh-engineering-skills#v0.1.1"
 
 # 2. restart the harness with that profile — `add` only edits the profile files;
 #    a running instance does not hot-load the new bundle
 dsh --profile web
 ```
 
-After the restart the `/` menu lists the 16 user-invoked skills and the model
-catalog carries the 11 model-invoked ones; `dsh-engineering-skills` appears under
+After the restart the `/` menu lists all 27 skills (16 user-only + 11 dual-channel)
+and the model catalog carries the 11 model-invoked ones; `dsh-engineering-skills` appears under
 Settings → Plugins.
 
 Local path for development:
 
 ```sh
-dsh plugin --profile web add /Users/qijie/Projects/CodeX/DeepSeek-Plugin/dsh-engineering-skills
+dsh plugin --profile web add <local-checkout>/dsh-engineering-skills
 ```
 
 ## Config
@@ -71,8 +71,8 @@ dsh plugin --profile web add /Users/qijie/Projects/CodeX/DeepSeek-Plugin/dsh-eng
     providerName: engineering-skills    # registry provider name
 ```
 
-Unknown categories or skill names fail the mount instead of silently shrinking
-the catalog.
+A non-empty `skills` list overrides `categories` entirely; unknown categories or
+skill names fail the mount instead of silently shrinking the catalog.
 
 ## Mapping (upstream → DSH)
 
@@ -93,6 +93,10 @@ node scripts/sync-upstream.mjs                  # re-fetch the pinned commit and
 node scripts/sync-upstream.mjs --source ../mp-skills   # use an existing clone
 node scripts/sync-upstream.mjs --check          # CI drift gate
 ```
+
+Both modes also verify that `UPSTREAM.json` `version` matches the version declared by
+the fetched upstream commit (`package.json` / `.claude-plugin/plugin.json`), so a stale
+version string cannot pass `--check` by being copied into the manifest.
 
 Release flow: bump `UPSTREAM.json` → sync → `pnpm test` → tag. Only skills listed
 in upstream's `.claude-plugin/plugin.json` ship; `in-progress/` and `misc/` never do.
@@ -128,14 +132,18 @@ is runnable ESM and `skills/` is data.
 
 ## Development
 
+Managed with pnpm `11.28.5` (`packageManager` field; CI pins the same version). Other
+major pnpm versions may rewrite `pnpm-lock.yaml`; check the lockfile diff before committing.
+
 ```sh
 pnpm install
-pnpm test                 # node test-host.mjs — 19 behavior assertions
-node test-registry.mjs    # integration against the real @deepseek-ai/dsh-skill
+pnpm test                 # node test-host.mjs — 23 behavior assertions
+node test-registry.mjs    # real @deepseek-ai/dsh-skill: catalog/load + fiber lifecycle
 pnpm run sync:check
 ```
 
 ## License
 
-Plugin code MIT (`LICENSE`); `skills/` is MIT content from Matt Pocock — see
-`NOTICE` and `UPSTREAM.json` for attribution and the pinned source.
+Plugin code MIT (`LICENSE`); `skills/` is MIT content from Matt Pocock (full text in
+`LICENSE-upstream`) — see `NOTICE` and `UPSTREAM.json` for attribution, the exact
+rewrite list and the pinned source.

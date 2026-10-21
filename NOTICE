@@ -1,22 +1,36 @@
 dsh-engineering-skills
-=====================================
+======================
 
-The skill instructions under `skills/` are vendored, unmodified except for the
-two `Skill tool` → `` `skill` tool `` rewrites listed in
-`scripts/sync-upstream.mjs`, from:
+The skill instructions under `skills/` are vendored from:
 
     Matt Pocock's skills — "Skills for Real Engineers"
     https://github.com/mattpocock/skills
     Licensed under the MIT License
-    Copyright (c) Matt Pocock
+    Copyright (c) 2026 Matt Pocock
+    Full license text: LICENSE-upstream
 
-Pinned source: see `UPSTREAM.json` (tag/version, 40-character commit, and the
+Pinned source: see `UPSTREAM.json` (version, 40-character commit, and the
 `.claude-plugin/plugin.json#skills` list that defines the shipped set).
+
+The vendored files are the upstream `SKILL.md` trees with these mechanical
+changes only, applied by `scripts/sync-upstream.mjs`:
+
+  - body rewrite: `Skill tool` -> `` `skill` tool `` (21 occurrences in 10 files);
+  - frontmatter normalization: `description` re-quoted as a JSON string, the
+    Codex-only `argument-hint` (2 skills) and `metadata` (1 skill) keys dropped;
+    unknown top-level keys are dropped with a warning;
+  - not vendored: every per-skill `agents/openai.yaml` (Codex UI metadata) and
+    upstream's bucket READMEs;
+  - nothing else in the instruction bodies is edited.
+
+`skills/` therefore differs from a raw upstream checkout by exactly those
+changes — it is NOT "unmodified". The diff is reproducible with
+`node scripts/sync-upstream.mjs --source <upstream-checkout>`.
 
 The plugin code (`lib/`, `scripts/`, `test-*.mjs`, `cordis.patch.yml`,
 `package.json`) is original work by 擎天 / tianji-qingtian under the MIT License
 in `LICENSE`. `skills/pr/CREDITS.md` carries upstream's own attribution for the
 `pr` skill (Dex Horthy / Humanlayer), and is vendored verbatim.
 
-If you redistribute this package, keep this NOTICE and the upstream MIT license
-alongside `LICENSE`.
+If you redistribute this package, keep both `LICENSE` (this plugin) and
+`LICENSE-upstream` (the vendored skills) alongside this NOTICE.
