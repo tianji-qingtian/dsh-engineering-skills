@@ -23,25 +23,13 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Smoke check (module exports)
-        run: |
-          node -e "import('./lib/index.js').then(m => {
-            if (typeof m.apply !== 'function') { console.error('missing apply()'); process.exit(1) }
-            if (!Array.isArray(m.inject) || !m.inject.includes('skills')) { console.error('missing skills injection'); process.exit(1) }
-            if (typeof m.Config !== 'function') { console.error('missing Config schema'); process.exit(1) }
-            console.log('exports ok:', Object.keys(m).join(', '))
-          })"
-
-      - name: Host behavior tests
+      - name: Behavior, registry/lifecycle and bundle tests
         run: pnpm test
-
-      - name: Registry integration + plugin-fiber lifecycle
-        run: node test-registry.mjs
 
       - name: Upstream drift and pin-version check
         run: pnpm run sync:check
 
-      - name: Package contents (runtime files only)
+      - name: Packed tarball smoke (contents + import)
         run: |
           pnpm pack --pack-destination /tmp >/dev/null
           tar -tzf /tmp/dsh-engineering-skills-*.tgz > /tmp/pack.txt
@@ -55,4 +43,8 @@ jobs:
             package/LICENSE-upstream; do
             grep -qx "$path" /tmp/pack.txt || { echo "missing $path"; exit 1; }
           done
-          echo "pack ok"
+          rm -rf /tmp/tarball && mkdir -p /tmp/tarball
+          tar -xzf /tmp/dsh-engineering-skills-*.tgz -C /tmp/tarball
+          ln -s "$PWD/node_modules" /tmp/tarball/package/node_modules
+          node -e "import('/tmp/tarball/package/lib/index.js').then(m => { if (typeof m.apply !== 'function' || !m.inject.includes('skills')) { console.error('tarball import failed'); process.exit(1) } console.log('tarball import ok') })"
+          node -e "const fs=require('fs'); const p='/tmp/tarball/package'; for (const f of ['lib/index.js','skills/manifest.json','cordis.patch.yml','LICENSE-upstream','NOTICE']) { if (!fs.existsSync(p+'/'+f)) { console.error('missing',f); process.exit(1) } } console.log('tarball files ok')"

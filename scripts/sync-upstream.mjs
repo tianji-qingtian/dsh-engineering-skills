@@ -44,8 +44,8 @@ const ADAPTATIONS = [
   [/\bSkill tool\b/g, '`skill` tool'],
 ]
 
-/** Frontmatter keys this harness understands. Everything else is dropped. */
-const KEPT_FRONTMATTER = new Set(['name', 'description', 'disable-model-invocation', 'user-invocable', 'whenToUse'])
+/** Frontmatter keys this harness consumes. Everything else is dropped. */
+const KEPT_FRONTMATTER = new Set(['name', 'description', 'disable-model-invocation', 'user-invocable'])
 
 function parseArgs(argv) {
   const args = { source: undefined, check: false }
@@ -114,8 +114,9 @@ function normalizeFrontmatter(yaml, where) {
   const user = scalar(yaml, 'user-invocable')
   if (disable !== undefined) lines.push(`disable-model-invocation: ${disable}`)
   if (user !== undefined) lines.push(`user-invocable: ${user}`)
-  const whenToUse = scalar(yaml, 'whenToUse')
-  if (whenToUse !== undefined) lines.push(`whenToUse: ${whenToUse}`)
+  // `whenToUse` is deliberately not carried: the bundled provider only feeds the
+  // catalog (name + description) and the registry never reads it here, so keeping
+  // it would be a field nothing consumes. Unknown keys are dropped with a warning.
   // `description` last when it is long, so the diff stays readable? No: keep
   // YAML key order stable and identical to upstream's first two keys.
   lines.splice(1, 0, `description: ${JSON.stringify(description)}`)
@@ -157,41 +158,41 @@ function shippedSkills(sourceDir) {
   })
 }
 
-function build(sourceDir) {
-  const skills = shippedSkills(sourceDir).sort((a, b) => a.name.localeCompare(b.name, 'en'))
-  const out = new Map() // relative path -> UTF-8 content
-  const manifestSkills = []
-  for (const skill of skills) {
-    const files = listFiles(skill.sourceDir)
-      // agents/openai.yaml is Codex UI metadata; this harness reads nothing from it.
-      .filter((file) => !relative(skill.sourceDir, file).startsWith(`agents${sep}`))
-    const skillMd = files.find((file) => relative(skill.sourceDir, file) === 'SKILL.md')
-    if (skillMd === undefined) throw new Error(`${skill.name}: no SKILL.md`)
-    const raw = readFileSync(skillMd, 'utf8')
-    const { yaml, body } = splitFrontmatter(raw, skill.name)
-    const description = scalar(yaml, 'description')
-    const disableModel = scalar(yaml, 'disable-model-invocation')
-    const userInvocable = scalar(yaml, 'user-invocable') !== 'false'
-    const modelInvocable = disableModel !== 'true'
-    const targetDir = `${skill.category}/${skill.name}`
-    for (const file of files) {
-      const rel = relative(skill.sourceDir, file)
-      const content = rel === 'SKILL.md'
-        ? `---\n${normalizeFrontmatter(yaml, skill.name)}\n---\n\n${adaptBody(body)}`
-        : readFileSync(file, 'utf8')
-      out.set(`${targetDir}/${rel}`, content)
-    }
-    manifestSkills.push({
-      name: skill.name,
-      category: skill.category,
-      dir: targetDir,
-      description,
-      modelInvocable,
-      userInvocable,
-      files: files.map((file) => relative(skill.sourceDir, file)).sort(),
-    })
+/**
+ * Adapt one upstream skill: copy its file bundle (minus Codex UI metadata) into
+ * the output map and return the manifest entry describing it.
+ */
+function adaptSkill(skill, out) {
+  const files = listFiles(skill.sourceDir)
+    // agents/openai.yaml is Codex UI metadata; this harness reads nothing from it.
+    .filter((file) => !relative(skill.sourceDir, file).startsWith(`agents${sep}`))
+  const skillMd = files.find((file) => relative(skill.sourceDir, file) === 'SKILL.md')
+  if (skillMd === undefined) throw new Error(`${skill.name}: no SKILL.md`)
+  const raw = readFileSync(skillMd, 'utf8')
+  const { yaml, body } = splitFrontmatter(raw, skill.name)
+  const description = scalar(yaml, 'description')
+  const targetDir = `${skill.category}/${skill.name}`
+  for (const file of files) {
+    const rel = relative(skill.sourceDir, file)
+    const content = rel === 'SKILL.md'
+      ? `---\n${normalizeFrontmatter(yaml, skill.name)}\n---\n\n${adaptBody(body)}`
+      : readFileSync(file, 'utf8')
+    out.set(`${targetDir}/${rel}`, content)
   }
-  const manifest = {
+  return {
+    name: skill.name,
+    category: skill.category,
+    dir: targetDir,
+    description,
+    modelInvocable: scalar(yaml, 'disable-model-invocation') !== 'true',
+    userInvocable: scalar(yaml, 'user-invocable') !== 'false',
+    files: files.map((file) => relative(skill.sourceDir, file)).sort(),
+  }
+}
+
+/** Assemble `skills/manifest.json` from the per-skill entries. */
+function buildManifest(entries) {
+  return {
     schemaVersion: 1,
     upstream: {
       repo: PIN.repo,
@@ -200,9 +201,16 @@ function build(sourceDir) {
       publishedVia: '.claude-plugin/plugin.json#skills',
     },
     generatedBy: 'scripts/sync-upstream.mjs',
-    skills: manifestSkills,
+    skills: entries,
   }
-  out.set('manifest.json', JSON.stringify(manifest, null, 2) + '\n')
+}
+
+/** Whole `skills/` tree: relative path -> UTF-8 content. */
+function build(sourceDir) {
+  const skills = shippedSkills(sourceDir).sort((a, b) => a.name.localeCompare(b.name, 'en'))
+  const out = new Map()
+  const entries = skills.map((skill) => adaptSkill(skill, out))
+  out.set('manifest.json', JSON.stringify(buildManifest(entries), null, 2) + '\n')
   return out
 }
 

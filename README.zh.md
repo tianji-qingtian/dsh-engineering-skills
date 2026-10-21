@@ -37,8 +37,8 @@
 
 ```sh
 # 1. 装进 web profile（pnpm 驱动；lib/ 已随仓库提交，安装时不跑构建脚本）。
-#    建议钉 release tag（#v0.1.1）；#main 跟踪最新提交。
-dsh plugin --profile web add "github:tianji-qingtian/dsh-engineering-skills#v0.1.1"
+#    建议钉 release tag（#v0.1.2）；#main 跟踪最新提交。
+dsh plugin --profile web add "github:tianji-qingtian/dsh-engineering-skills#v0.1.2"
 
 # 2. 重启该 profile —— add 只改 profile 文件，运行中的实例不会热加载
 dsh --profile web
@@ -117,16 +117,15 @@ node scripts/sync-upstream.mjs --check          # CI：skills/ 与 pin 不一致
 
 ## 开发与测试
 
-仓库用 pnpm `11.28.5` 管理（`packageManager` 字段，CI 同版本）；其它大版本可能重写 `pnpm-lock.yaml` 的格式，提交前请确认锁文件只有预期改动。
+仓库用 pnpm `11.28.5` 管理（`packageManager` 字段，CI 同版本）；其它大版本可能重写 `pnpm-lock.yaml` 的格式，提交前请确认锁文件只有预期改动。契约基线见 [REQUIREMENTS.md](REQUIREMENTS.md)——改服务、字段或配置语义前先改它。
 
 ```sh
 pnpm install
-pnpm test                 # node test-host.mjs：23 项行为断言
-node test-registry.mjs    # 对真实 @deepseek-ai/dsh-skill 注册表的集成测试
-pnpm run sync:check       # 上游漂移检查
+pnpm test                 # 23 项行为断言 + 真实 registry/生命周期 + bundle/打包契约
+pnpm run sync:check       # 上游漂移 + pin 版本校验
 ```
 
-`test-host.mjs` 用假 `skills` 服务跑真实 `apply()`，并复刻 registry 的候选校验规则（kebab-case 名称、description 非空、invocation 布尔、provider 归属），防止某条技能 frontmatter 悄悄把整张目录打残。`test-registry.mjs` 用真实 `SkillRegistry` 走 `list()` / `get()`，证明 `skill` 工具那条加载路径能拿到正文；它还验证插件 fiber dispose 后 provider 真正注销、插件可重新挂载（防止停用/热重载后旧目录残留、重挂失败）。
+`test-host.mjs` 用假 `skills` 服务跑真实 `apply()`，并复刻 registry 的候选校验规则（kebab-case 名称、description 非空、invocation 布尔、provider 归属），防止某条技能 frontmatter 悄悄把整张目录打残。`test-registry.mjs` 用真实 `SkillRegistry` 走 `list()` / `get()`，证明 `skill` 工具那条加载路径能拿到正文；它还验证插件 fiber dispose 后 provider 真正注销、插件可重新挂载（防止停用/热重载后旧目录残留、重挂失败）。`test-package.mjs` 校验 `cordis.patch.yml` 的 insert 行、`files` 白名单、manifest 与磁盘一致、peer/许可文件；CI 再把 `pnpm pack` 出的 tarball 解包后真实 import 一次。
 
 ## 许可
 

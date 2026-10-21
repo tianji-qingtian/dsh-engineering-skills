@@ -41,9 +41,9 @@ commands with `npx @deepseek-ai/dsh`). This release is verified on harness `0.2.
 
 ```sh
 # 1. add the bundle to your web profile (pnpm-backed; the built lib/ is committed,
-#    so no build script runs at install time). Prefer a release tag (#v0.1.1);
+#    so no build script runs at install time). Prefer a release tag (#v0.1.2);
 #    #main tracks the latest commit.
-dsh plugin --profile web add "github:tianji-qingtian/dsh-engineering-skills#v0.1.1"
+dsh plugin --profile web add "github:tianji-qingtian/dsh-engineering-skills#v0.1.2"
 
 # 2. restart the harness with that profile — `add` only edits the profile files;
 #    a running instance does not hot-load the new bundle
@@ -134,13 +134,18 @@ is runnable ESM and `skills/` is data.
 
 Managed with pnpm `11.28.5` (`packageManager` field; CI pins the same version). Other
 major pnpm versions may rewrite `pnpm-lock.yaml`; check the lockfile diff before committing.
+The contract baseline is [REQUIREMENTS.md](REQUIREMENTS.md) — change it first when a
+service, field or config semantic moves.
 
 ```sh
 pnpm install
-pnpm test                 # node test-host.mjs — 23 behavior assertions
-node test-registry.mjs    # real @deepseek-ai/dsh-skill: catalog/load + fiber lifecycle
-pnpm run sync:check
+pnpm test                 # 23 assertions + real registry/lifecycle + bundle/package contract
+pnpm run sync:check       # upstream drift + pin-version gate
 ```
+
+`test-package.mjs` checks the `cordis.patch.yml` insert row, the npm `files` whitelist,
+manifest-vs-tree consistency and the peer/license files; CI additionally unpacks the
+packed tarball and imports it, so the published artifact is exercised, not just the repo.
 
 ## License
 
